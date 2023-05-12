@@ -1,6 +1,8 @@
 import random
 from collections import deque, defaultdict
 
+class SingleTaskReplayBuffer:
+    pass
 
 class MultiEnvReplayBuffer:
     def __init__(self, buffer_size_per_env):

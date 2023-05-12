@@ -20,7 +20,7 @@ class CEM_opt:
 
         self.population = [
             self.mean_vect + np.random.rand(self.population_shape)*self.std
-            for i in range(self.numb_population)
+            for _ in range(self.numb_population)
         ]
 
     def update(self, rewards: np.array):
@@ -31,8 +31,11 @@ class CEM_opt:
 
         self.population = [
             self.mean_vect + np.random.rand(self.population_shape)*self.std
-            for i in range(self.numb_population)
+            for _ in range(self.numb_population)
         ]
     @property
     def solution(self):
         return self.mean_vect
+
+    def sample_action(self):
+        return self.population
