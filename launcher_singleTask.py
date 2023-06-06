@@ -42,7 +42,7 @@ for _ in range(100):
 world_model = BNN(action_dim=action_space_shape,
                   obs_dim=obs_space_shape,
                   reward_dim=1,
-                  )
+                  ).double()
 # preload weight : TODO
 outer_optimizer = Lion(world_model.parameters())
 
@@ -54,7 +54,7 @@ outer_optimizer = Lion(world_model.parameters())
 task_specific = BNN(action_dim=action_space_shape,
                     obs_dim=obs_space_shape,
                     reward_dim=1,
-                    W_world_model=world_model.state_dict())
+                    W_world_model=world_model.state_dict()).double()
 
 # TO CHECK : should i optimize the task model or the planner ?
 inner_optimizer = Lion(task_specific.parameters())
