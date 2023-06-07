@@ -1,17 +1,23 @@
 from bnn import BNN
 from cem_optimizer import CEM_opt
+from timebudget import timebudget
+from multiprocessing import Pool
+from functools import partial
 import numpy as np
 import torch
 
+_DEVICE = 'cuda:0' if torch.cuda.is_available() else 'cpu'
 class Planner:
     def __init__(self,
                  stochastic_dyna: BNN,
                  action_dim=4,
                  plan_horizon=20,
                  num_particles=50,
-                 num_sequence_action=20,
+                 num_sequence_action=50,
+                 num_elite=30,
                  env_action_space_shape=4,
                  env_obs_space_shape=39,
+
                  ):
 
         self.dynamic = stochastic_dyna
@@ -21,28 +27,34 @@ class Planner:
         self.num_sequence_action = num_sequence_action
         self.env_action_space_shape = env_action_space_shape
         self.env_obs_space_shape = env_obs_space_shape
+
         # NOT Sure on pop shape
         self.cem = CEM_opt(population_shape=(action_dim*plan_horizon),
-                           numb_population=num_sequence_action)
+                           num_population=num_sequence_action,
+                           num_elite=num_elite)
 
     def _rollout_funct(self, state, actions):
         # calc 1/time_horizon * sum(reward for each action)
         reward = np.zeros(len(actions))
-        state = torch.from_numpy(state)
+        state = torch.from_numpy(state).to(_DEVICE)
+
         actions = actions.reshape((-1, 4))
+        self.dynamic.deterministic_mode()
         for idx, a in enumerate(actions):
             with torch.no_grad():
-                a = torch.from_numpy(a)
+                a = torch.from_numpy(a).to(_DEVICE)
                 x = torch.concatenate((state, a))
                 y = self.dynamic.forward(x)
                 state, r = y[:len(y)-1], y[-1]
-            reward[idx] = r.numpy()
+            # looks like put the r in a np.array put all to cpu
+            reward[idx] = r
+        self.dynamic.stochatisc_mode()
         return np.mean(reward)
 
+    #@timebudget
     def plan_step(self, state):
         # create particle st ---> nope, just re-run
         action_sequences = self.cem.sample_act()
-
         rewards = np.zeros(len(action_sequences))
         for idx, seq in enumerate(action_sequences):
             reward_of_particle = []
@@ -58,7 +70,7 @@ class Planner:
 if __name__ == '__main__':
     # scope of this: just testing
     from metaworld.envs import (ALL_V2_ENVIRONMENTS_GOAL_OBSERVABLE)
-
+    torch.set_default_dtype(torch.float64)
     class_env = "door-open-v2-goal-observable"
     door_open_goal_observable_cls = ALL_V2_ENVIRONMENTS_GOAL_OBSERVABLE[class_env]
     env = door_open_goal_observable_cls()
@@ -69,9 +81,10 @@ if __name__ == '__main__':
     s = env.reset()
     dynam = BNN(action_space_shape,
                 obs_space_shape,
-                reward_dim=1)
-    planner = Planner(dynam.double(),
+                reward_dim=1).to(_DEVICE)
+    planner = Planner(dynam,
                       action_dim=action_space_shape,
-                      plan_horizon=10,
-                      num_particles=50)
+                      plan_horizon=20,
+                      num_particles=200)
+
     print(planner.plan_step(s))

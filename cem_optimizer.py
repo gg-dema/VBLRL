@@ -10,28 +10,28 @@ class CEM_opt:
 
     def __init__(self,
                  population_shape,   # action dim * task horizon
-                 numb_population: int,
-                 numb_elite: int = 5):
-        self.numb_elite = numb_elite
-        self.numb_population = numb_population
+                 num_population: int,
+                 num_elite: int = 30):
+        self.num_elite = num_elite
+        self.num_population = num_population
         self.population_shape = population_shape
         self.mean_vect = np.zeros(self.population_shape)
         self.std = np.ones(self.population_shape)
 
         self.population = [
             self.mean_vect + np.random.rand(self.population_shape)*self.std
-            for _ in range(self.numb_population)
+            for _ in range(self.num_population)
         ]
 
     def update(self, rewards: np.array):
-        elite_idxs = np.array(rewards).argsort()[-self.numb_elite:]
+        elite_idxs = np.array(rewards).argsort()[-self.num_elite:]
         elite_weights = [self.population[idx] for idx in elite_idxs]
         self.mean_vect = np.array(elite_weights).mean(axis=0)
         self.std = np.array(elite_weights).std(axis=0)
 
         self.population = [
             self.mean_vect + np.random.rand(self.population_shape)*self.std
-            for _ in range(self.numb_population)
+            for _ in range(self.num_population)
         ]
     @property
     def solution(self):

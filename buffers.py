@@ -1,6 +1,8 @@
-import random
+import torch
 import os
+import random
 import pickle
+import numpy as np
 from collections import deque, defaultdict
 
 class SingleTaskReplayBuffer:
@@ -46,14 +48,11 @@ class MultiEnvReplayBuffer:
         return self._transpose_transitions(transitions)
 
     def _transpose_transitions(self, transitions):
-        states, actions, rewards, next_states, dones, = [], [], [], [], []
-        for transition in transitions:
-            state, action, reward, next_state, done = transition
-            states.append(state)
-            actions.append(action)
-            rewards.append(reward)
-            next_states.append(next_state)
-            dones.append(done)
+        states = np.array([t[0] for t in transitions], dtype=np.float32)
+        actions = np.array([t[1] for t in transitions], dtype=np.float32)
+        rewards = np.array([t[2] for t in transitions], dtype=np.float32).reshape((-1, 1))
+        next_states = np.array([t[3] for t in transitions], dtype=np.float32)
+        dones = np.array([t[4] for t in transitions])
         return states, actions, rewards, next_states, dones
 
     def _initialize_empty_buffer(self):
