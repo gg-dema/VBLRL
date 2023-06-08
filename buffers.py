@@ -5,8 +5,6 @@ import pickle
 import numpy as np
 from collections import deque, defaultdict
 
-class SingleTaskReplayBuffer:
-    pass
 
 class MultiEnvReplayBuffer:
     """
@@ -22,17 +20,23 @@ class MultiEnvReplayBuffer:
     for save a local copy of the buffer :
       automatically save each deque, in several file.
       1 file for env
-
     """
+
     def __init__(self, buffer_size_per_env, **kwargs):
         self.size_per_env = buffer_size_per_env
         self.buffer_size_per_env = buffer_size_per_env
         self._initialize_empty_buffer()
+        self.elem_for_buffer = defaultdict(lambda: -1)
         if kwargs.get('preload'):  # get handle keyError, basic dict[key] dont
             self.read_buffer(kwargs['path_preload'])
 
     def add(self, state, action, reward, next_state, done, env_id):
+
         transition = (state, action, reward, next_state, done)
+
+        if self.elem_for_buffer[env_id] < self.buffer_size_per_env:
+            self.elem_for_buffer[env_id] += 1
+
         self.buffer[env_id].append(transition)
 
 
@@ -41,13 +45,18 @@ class MultiEnvReplayBuffer:
         return self._transpose_transitions(transitions)
 
     def sample_all_envs(self, batch_size):
-        # NON FUNZIONA ---> env_id e' un int, quindi seleziona transizioni solo da un buffer
-        env_ids = list(self.buffer.keys())
-        env_id = random.choice(env_ids)
-        transitions = random.sample(self.buffer[env_id], batch_size)
-        return self._transpose_transitions(transitions)
+        batch = [None]*batch_size
+        max_id = max(self.buffer.keys())
+        for i in range(batch_size):
+            selected_buffer_idx = random.randint(0, max_id)
+            batch[i] = self.buffer[selected_buffer_idx][
+                random.randint(0, self.elem_for_buffer[selected_buffer_idx])
+            ]
+            return self._transpose_transitions(batch)
+
 
     def _transpose_transitions(self, transitions):
+
         states = np.array([t[0] for t in transitions], dtype=np.float32)
         actions = np.array([t[1] for t in transitions], dtype=np.float32)
         rewards = np.array([t[2] for t in transitions], dtype=np.float32).reshape((-1, 1))
@@ -66,11 +75,14 @@ class MultiEnvReplayBuffer:
             #sto salvando solo le deque
             pickle.dump(self.buffer[env_id], file)
 
-    def read_buffer(self, path):
-        self._initialize_empty_buffer()
-        files = os.listdir(path)
+    def read_buffer(self, path, from_scratch=False):
 
+        if from_scratch:
+            self._initialize_empty_buffer()
+
+        files = os.listdir(path)
         buff_key = []
+
         for file in files:
             if file.endswith('pkl'): buff_key.append(file[-5])
 
@@ -79,4 +91,6 @@ class MultiEnvReplayBuffer:
             with open(buffer_path, 'rb') as local_buff:
                 temp_buff = pickle.load(local_buff)
                 self.buffer[int(k)] += temp_buff
+                self.elem_for_buffer[int(k)] = len(self.buffer[int(k)])
+
 
