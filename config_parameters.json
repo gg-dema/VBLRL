@@ -1,0 +1,69 @@
+{
+  "const": {
+    "DEVICE": "cuda:0",
+    "ACTION_SHAPE": 4,
+    "OBS_SHAPE": 39,
+    "REWARD_SHAPE": 1
+  },
+
+  "buffer": {
+    "max_size_for_env": 1000,
+    "preload": true,
+
+    "IO_option": {
+      "path": "buffer_stock",
+      "from_scratch": false
+    },
+    "correspondence_id2env": {
+      "first_idx_free": 27,
+      "drawer-close-v2-goal-observable": 0,
+      "handle-pull-side-v2-goal-observable": 1,
+      "sweep-into-v2-goal-observable": 2,
+      "coffee-pull-v2-goal-observable": 3,
+      "plate-slide-back-side-v2-goal-observable": 4,
+      "stick-pull-v2-goal-observable": 5,
+      "window-open-v2-goal-observable": 6,
+      "push-back-v2-goal-observable": 7,
+      "faucet-close-v2-goal-observable": 8,
+      "handle-press-v2-goal-observable": 9,
+      "button-press-topdown-v2-goal-observable": 10,
+      "dial-turn-v2-goal-observable": 11,
+      "plate-slide-side-v2-goal-observable": 12,
+      "door-close-v2-goal-observable": 13,
+      "door-open-v2-goal-observable": 14,
+      "coffee-push-v2-goal-observable": 15,
+      "hand-insert-v2-goal-observable": 16,
+      "push-wall-v2-goal-observable": 17,
+      "button-press-topdown-wall-v2-goal-observable": 18,
+      "shelf-place-v2-goal-observable": 19,
+      "reach-wall-v2-goal-observable": 20,
+      "stick-push-v2-goal-observable": 21,
+      "door-lock-v2-goal-observable": 22,
+      "door-unlock-v2-goal-observable": 23,
+      "handle-pull-v2-goal-observable": 24,
+      "reach-v2-goal-observable": 25,
+      "hammer-v2-goal-observable": 26
+    }
+  },
+
+  "planner": {
+    "plan_horizon": 20,
+    "num_particles" : 30,
+    "load_old_planer": false,
+    "path_old_planner": "planner_stock",
+    "cem": {
+      "population": 100,
+      "num_elite": 10
+    }
+  },
+
+  "train": {
+    "LR_INNER": 1e-3,
+    "LR_OUTER": 1e-2,
+    "EPISODE_FOR_TASK": 100,
+    "batch_size": 256,
+    "KL_WEIGTH": 0.001,
+    "LOAD_OLD_MODEL": true,
+    "BATCH_SIZE": 256
+  }
+}

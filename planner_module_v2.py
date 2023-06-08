@@ -1,8 +1,5 @@
 from bnn import BNN
 from cem_optimizer import CEM_opt
-from timebudget import timebudget
-from multiprocessing import Pool
-from functools import partial
 import numpy as np
 import torch
 
@@ -46,7 +43,7 @@ class Planner:
                 x = torch.concatenate((state, a))
                 y = self.dynamic.forward(x)
                 state, r = y[:len(y)-1], y[-1]
-            # looks like put the r in a np.array put all to cpu
+                # problem : how can the reward be = 0 for the end of the task?
             reward[idx] = r
         self.dynamic.stochatisc_mode()
         return np.mean(reward)
@@ -85,6 +82,11 @@ if __name__ == '__main__':
     planner = Planner(dynam,
                       action_dim=action_space_shape,
                       plan_horizon=20,
-                      num_particles=200)
+                      num_particles=30,
+                      num_sequence_action=50)
+
+    # piu particelle : migliore stima della Q funct
+    # maggior num seq action : maggior varieta' nella stima delle azioni possibili (?)
+    # plan_horizon :
 
     print(planner.plan_step(s))

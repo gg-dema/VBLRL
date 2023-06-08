@@ -22,7 +22,7 @@ s = env.reset()
 action_space_shape = env.action_space.shape[0]
 obs_space_shape = env.observation_space.shape[0]
 PLAN_HORIZON = 20
-EPISODE_FOR_TASK = 100
+EPISODE_FOR_TASK = 10
 BATCH_SIZE = 256
 KL_WEIGHT = 0.01
 PRELOAD_BUFFER = True
@@ -57,7 +57,7 @@ if not PRELOAD_BUFFER:
         new_s, reward, done, info = env.step(act)
         buffer.add(s, act, reward, new_s, done, env_id=0)
 else:
-    buffer.read_buffer("VBLRL_rl_exam/buffer_stock")
+    buffer.read_buffer("VBLRL_rl_exam/buffer_stock", from_scratch=True)
 
 
 # ----------------------------------------------
@@ -77,7 +77,7 @@ task_specific = BNN(action_dim=action_space_shape,
                     obs_dim=obs_space_shape,
                     reward_dim=1,
                     weight_world_model=world_model.state_dict()).to(DEVICE)
-
+#task_specific.deterministic_mode()
 mse_loss = nn.MSELoss().to(DEVICE)
 kl_loss = bnn.BKLLoss(reduction='mean', last_layer_only=False).to(DEVICE)
 inner_optimizer = Lion(task_specific.parameters(), lr=1e-3)
@@ -87,17 +87,17 @@ outer_optimizer = Lion(world_model.parameters(), lr=1e-2)
 planner = Planner(stochastic_dyna=task_specific,
                   action_dim=action_space_shape,
                   plan_horizon=PLAN_HORIZON,
-                  num_particles=80,
-                  num_elite=30,
-                  num_sequence_action=20)
+                  num_particles=2,
+                  num_elite=1,
+                  num_sequence_action=10)
 
 # training loop
 task_id = 0
-for ep in range(EPISODE_FOR_TASK):
+for ep in range(EPISODE_FOR_TASK):  # default val : 100
     actual_state = env.reset()
     actual_state = actual_state.astype(np.float32)
     reward_for_ep = []
-    for t in range(PLAN_HORIZON):
+    for t in range(PLAN_HORIZON):  # default value plan horizon: 20
         best_action = planner.plan_step(actual_state)
         new_state, reward, done, info = env.step(best_action)
         buffer.add(actual_state,
@@ -116,4 +116,4 @@ for ep in range(EPISODE_FOR_TASK):
     buffer.write_buffer('VBLRL_rl_exam/buffer_stock')
     print(f'#--------- avg rew for ep {np.mean(reward_for_ep)}')
     # for now there is no meaning in train the world model
-    # update_with_elbo(world_model, buffer, optimizer=outer_optimizer, task_id=-1)
+    update_with_elbo(world_model, buffer, optimizer=outer_optimizer, task_id=-1)
