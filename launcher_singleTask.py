@@ -22,7 +22,7 @@ s = env.reset()
 action_space_shape = env.action_space.shape[0]
 obs_space_shape = env.observation_space.shape[0]
 PLAN_HORIZON = 20
-EPISODE_FOR_TASK = 10
+EPISODE_FOR_TASK = 100
 BATCH_SIZE = 256
 KL_WEIGHT = 0.01
 PRELOAD_BUFFER = True
@@ -57,7 +57,7 @@ if not PRELOAD_BUFFER:
         new_s, reward, done, info = env.step(act)
         buffer.add(s, act, reward, new_s, done, env_id=0)
 else:
-    buffer.read_buffer("VBLRL_rl_exam/buffer_stock", from_scratch=True)
+    buffer.read_buffers("buffer_stock", from_scratch=False)
 
 
 # ----------------------------------------------
@@ -92,10 +92,9 @@ planner = Planner(stochastic_dyna=task_specific,
                   num_sequence_action=10)
 
 # training loop
-task_id = 0
+task_id = 37
 for ep in range(EPISODE_FOR_TASK):  # default val : 100
     actual_state = env.reset()
-    actual_state = actual_state.astype(np.float32)
     reward_for_ep = []
     for t in range(PLAN_HORIZON):  # default value plan horizon: 20
         best_action = planner.plan_step(actual_state)
@@ -104,7 +103,7 @@ for ep in range(EPISODE_FOR_TASK):  # default val : 100
                    best_action,
                    reward,
                    new_state,
-                   done, env_id=0)
+                   done, env_id=task_id)
         actual_state = new_state
         reward_for_ep.append(reward)
 
@@ -113,7 +112,8 @@ for ep in range(EPISODE_FOR_TASK):  # default val : 100
 
         if done:
             break
-    buffer.write_buffer('VBLRL_rl_exam/buffer_stock')
+    buffer.write_buffer('buffer_stock')
     print(f'#--------- avg rew for ep {np.mean(reward_for_ep)}')
     # for now there is no meaning in train the world model
-    update_with_elbo(world_model, buffer, optimizer=outer_optimizer, task_id=-1)
+    loss_world_model = update_with_elbo(world_model, buffer, optimizer=outer_optimizer, task_id=-1)
+    print(f'ep {ep} | world_model:  | [mse, kl, tot_loss] {loss_world_model} |')
