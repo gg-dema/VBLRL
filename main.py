@@ -1,7 +1,7 @@
 from buffers import MultiEnvReplayBuffer
 from bnn import BNN
 from lion_opt import Lion
-from planner_module_v2 import Planner
+from planner_module_v3 import Planner
 from metaworld.envs import (ALL_V2_ENVIRONMENTS_GOAL_OBSERVABLE)
 import numpy as np
 import torchbnn as bnn
@@ -67,7 +67,7 @@ def save_binary_objs(objs, path, name_template: str):
 
 def load_binary_file(path):
     with open(path, 'rb') as f:
-        obj = pickle.load(path)
+        obj = pickle.load(f)
     return obj
 
 
@@ -180,7 +180,9 @@ if __name__ == '__main__':
 
     for idx in envs.keys():
         model_name = os.path.join(train_config['path_task_specific'], f'model_env{idx}.pth')
-        planner_name = os.path.join(train_config['path_optimizer'], f'optimizer_env{idx}.pkl')
+        planner_name = os.path.join(planner_config['path_planner'], f'planner_env{idx}.pkl')
+        optimizer_name = os.path.join(train_config['path_optimizer'], f'optimizer_env{idx}.pkl')
+
         if os.path.isfile(model_name) and train_config['LOAD_TASK_MODEL']:
 
             task_specific_models[idx] = BNN(const_config['ACTION_SHAPE'],
@@ -195,7 +197,6 @@ if __name__ == '__main__':
                                             weight_world_model=world_model.state_dict()
                                             ).to(DEVICE)
 
-        # TODO: save or load the planner
         if os.path.isfile(planner_name) and train_config['LOAD_TASK_MODEL']:
             planners[idx] = load_binary_file(planner_name)
         else:
@@ -206,8 +207,11 @@ if __name__ == '__main__':
                                     num_elite=planner_config['cem']['num_elite'],
                                     num_sequence_action=planner_config['cem']['population'])
 
-        optimizers[idx] = Lion(task_specific_models[idx].parameters(),
-                               lr=train_config['LR_INNER'])
+        if os.path.isfile(optimizer_name) and train_config['LOAD_TASK_MODEL']:
+            optimizers[idx] = load_binary_file(optimizer_name)
+        else:
+            optimizers[idx] = Lion(task_specific_models[idx].parameters(),
+                                   lr=train_config['LR_INNER'])
 
     # ----------------  loss  ----------------------
     mse_loss = nn.MSELoss().to(DEVICE)
@@ -243,10 +247,9 @@ if __name__ == '__main__':
             print(f'#--------- avg rew for ep {np.mean(reward_for_ep)}')
             # for now there is no meaning in train the world model
             update_with_elbo(world_model, multibuffer, optimizer=outer_opt, task_id=-1)
-            if (ep % 10) == 0:
-                multibuffer.write_buffer(buff_config['IO_option']['path'])
-                save_binary_objs(planners, planner_config['path_old_planner'], name_template='planner_env')
-                save_binary_objs(optimizers, train_config['path_optimizer'], name_template='optimizer_env')
-                save_binary_objs({'World':outer_opt}, train_config['path_optimizer'], name_template='optimizer')
-                save_torch_models({'World': world_model}, train_config['path_world_model'])
-                save_torch_models(task_specific_models, train_config['path_task_specific'])
+            multibuffer.write_buffer(buff_config['IO_option']['path'])
+            save_binary_objs(planners, planner_config['path_old_planner'], name_template='planner_env')
+            save_binary_objs(optimizers, train_config['path_optimizer'], name_template='optimizer_env')
+            save_binary_objs({'World':outer_opt}, train_config['path_optimizer'], name_template='optimizer')
+            save_torch_models({'World': world_model}, train_config['path_world_model'])
+            save_torch_models(task_specific_models, train_config['path_task_specific'])

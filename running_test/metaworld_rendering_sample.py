@@ -15,4 +15,5 @@ a = env.action_space.sample()  # Sample an action
 obs, reward, done, info = env.step(a)
 
 while True:
+
     env.render()

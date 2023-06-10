@@ -1,9 +1,11 @@
 from bnn import BNN
 from cem_optimizer import CEM_opt
+from threading import Thread
 import numpy as np
 import torch
 
 _DEVICE = 'cuda:0' if torch.cuda.is_available() else 'cpu'
+
 class Planner:
     def __init__(self,
                  stochastic_dyna: BNN,
@@ -30,39 +32,41 @@ class Planner:
                            num_population=num_sequence_action,
                            num_elite=num_elite)
 
-    def _rollout_funct(self, state, actions):
-        # calc 1/time_horizon * sum(reward for each action)
-        reward = np.zeros(len(actions))
-        state = torch.from_numpy(state).to(_DEVICE)
 
-        actions = actions.reshape((-1, 4))
-        self.dynamic.deterministic_mode()
-        for idx, a in enumerate(actions):
-            with torch.no_grad():
-                a = torch.from_numpy(a).to(_DEVICE)
-                x = torch.concatenate((state, a))
-                y = self.dynamic.forward(x)
-                state, r = y[:len(y)-1], y[-1]
-                # problem : how can the reward be = 0 for the end of the task?
-            reward[idx] = r
-        self.dynamic.stochatisc_mode()
-        return np.mean(reward)
-
-
-
-    #@timebudget
     def plan_step(self, state):
-        # create particle st ---> nope, just re-run
         action_sequences = self.cem.sample_act()
-        rewards = np.zeros(len(action_sequences))
-        for idx, seq in enumerate(action_sequences):
-            reward_of_particle = []
-            for particle in range(self.num_particles):
-                reward_of_particle.append(self._rollout_funct(state, seq))  # return avg reward for the sequence
-            rewards[idx] = np.mean(reward_of_particle)
-        self.cem.update(rewards)
-        # return best action : should be this, second option. To upgrade later
+        action_sequences = [action_sequences[i].reshape((-1, 4)) for i in range(self.num_sequence_action)]
+
+        rewards_for_sequence = np.zeros(self.num_sequence_action)
+        for idx, sequence in enumerate(action_sequences):
+            rewards_for_sequence[idx] = self.eval_action_seq(state, sequence)
+        self.cem.update(rewards_for_sequence)
         return self.cem.solution[:self.env_action_space_shape]
+
+    def eval_action_seq(self, state, action_sequence):
+        rewards = [None]*self.num_particles
+        for i in range(self.num_particles):
+            t = Thread(target=self.propagate,
+                       args=(self.dynamic.sample_linear_net_functional('cpu'),
+                             action_sequence,
+                             state,
+                             rewards,
+                             i)
+                       )
+            t.start()
+            t.join()
+        return sum(rewards)/self.num_particles
+
+    def propagate(self, dynamic, action_seq, state, rewards_array, index):
+        state = torch.from_numpy(state)
+        r_tot = 0
+        obs_shape = state.shape[0]
+        for act in action_seq:
+            x = torch.concatenate((state, torch.from_numpy(act)))
+            y = dynamic(x)
+            state, reward = y[:obs_shape], y[-1]
+            r_tot += reward.item()
+        rewards_array[index] = r_tot/action_seq.shape[0]
 
 
 

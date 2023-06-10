@@ -16,7 +16,7 @@ class CEM_opt:
         self.num_population = num_population
         self.population_shape = population_shape
         self.mean_vect = np.zeros(self.population_shape)
-        self.std = np.ones(self.population_shape)
+        self.std = np.ones(self.population_shape)*0.5
 
         self.population = [
             self.mean_vect + np.random.rand(self.population_shape)*self.std

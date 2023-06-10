@@ -1,16 +1,18 @@
+from collections import OrderedDict
+
 from torchbnn.modules.linear import BayesLinear
 from torchbnn.modules.module import BayesModule
 from torchbnn.utils import freeze, unfreeze
 from torch.nn.functional import relu
 import torch.nn.functional as F
-
+import torch
 
 class BayesLayerWithSample(BayesLinear):
     """
         same of BayesLinear from torchbnn, just add the possibility of sample
         a set of weight from the net. Functional paradigm for calc linear output
     """
-    def sample_layer(self, device):
+    def sample_layer_functional(self, device):
         if self.weight_eps is None:
             weight = (self.weight_mu + torch.exp(self.weight_log_sigma) * torch.randn_like(
                 self.weight_log_sigma)).detach()
@@ -31,6 +33,26 @@ class BayesLayerWithSample(BayesLinear):
             return F.linear(x, weight, bias)
 
         return linear_step
+
+    def sample_weight(self, device):
+        W = {}
+        if self.weight_eps is None:
+            weight = (self.weight_mu + torch.exp(self.weight_log_sigma) * torch.randn_like(
+                self.weight_log_sigma)).detach()
+        else:
+            weight = (self.weight_mu + torch.exp(self.weight_log_sigma) * self.weight_eps).detach()
+        weight = weight.to(device)
+        W['weight'] = weight
+        if self.bias:
+            if self.bias_eps is None:
+                bias = (self.bias_mu + torch.exp(self.bias_log_sigma) * torch.randn_like(self.bias_log_sigma)).detach()
+            else:
+                bias = (self.bias_mu + torch.exp(self.bias_log_sigma) * self.bias_eps).detach()
+            bias = bias.to(device)
+            W['bias'] = bias
+
+        return W
+
 
 
 class BNN(BayesModule):
@@ -74,17 +96,25 @@ class BNN(BayesModule):
         except BaseException:
             print('non compatible W')
 
-    def sample_linear_net(self, device):
+    def sample_linear_net_functional(self, device):
         step = []
         for layer in self._modules.items():
-            step.append(layer[1].sample_layer(device))
+            step.append(layer[1].sample_layer_functional(device))
 
         def forward_with_sample(x):
             for op in step:
-                x = F.elu(op(x))
+                x = F.relu(op(x))
             return x
 
         return forward_with_sample
+
+    def sample_linear_net_weight(self, device):
+        params = OrderedDict()
+        for name, layer in self._modules.items():
+            dict_forlayer = layer.sample_weight(device)
+            for tensor_name, tensor in dict_forlayer.items():
+                params[name+'.'+tensor_name] = tensor
+        return params
 
     def deterministic_mode(self):
         '''deterministic output'''
@@ -96,11 +126,10 @@ class BNN(BayesModule):
 
 
 if __name__ == '__main__':
-    import torch
     import time
     dev = 'cuda:0'
     test_freeze_unfreeze = False
-    test_functionalSample_vs_basicNet = True
+    test_functionalSample_vs_basicNet = False
 
     basic_bnn_gpu = BNN(
         action_dim=10,
@@ -156,7 +185,7 @@ if __name__ == '__main__':
 
 
 
-        sample_cpu = basic_bnn_cpu.sample_linear_net(device='cpu')
+        sample_cpu = basic_bnn_cpu.sample_linear_net_functional(device='cpu')
         t_start = time.time()
         for i in range(iter_numb):
             _ = sample_cpu(x_cpu)
@@ -166,10 +195,12 @@ if __name__ == '__main__':
 
 
 
-        sample_gpu = basic_bnn_gpu.sample_linear_net(device='cuda:0')
+        sample_gpu = basic_bnn_gpu.sample_linear_net_functional(device='cuda:0')
         t_start = time.time()
         for i in range(iter_numb):
             _ = sample_gpu(x_gpu)
         t_end = time.time()
         has_grad = _.requires_grad
         print(f'{iter_numb} step forward gpu FUNCT:{t_end - t_start}, grad: {has_grad}')
+
+    print(basic_bnn_cpu.sample_linear_net_weight('cpu'))
