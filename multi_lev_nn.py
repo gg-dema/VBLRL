@@ -7,10 +7,10 @@ class LinNet(nn.Module):
     def __init__(self):
         super(LinNet, self).__init__()
 
-        self.l1 = nn.Linear(10, 50)
-        self.l2 = nn.Linear(50, 100)
-        self.l3 = nn.Linear(100, 400)
-        self.l4 = nn.Linear(400, 10)
+        self.l1 = nn.Linear(43, 128)
+        self.l2 = nn.Linear(128, 256)
+        self.l3 = nn.Linear(256, 128)
+        self.l4 = nn.Linear(128, 40)
 
     def forward(self, x):
         x = F.relu(self.l1(x))
@@ -20,7 +20,7 @@ class LinNet(nn.Module):
 
 
 class Propagation_net:
-    def __init__(self, num_particles=40, action_dim=4, obs_dim=39):
+    def __init__(self, num_particles=50, action_dim=4, obs_dim=39):
 
         self.num_particles = num_particles
         self.action_dim = action_dim
@@ -38,22 +38,23 @@ class Propagation_net:
         else:
             print('no gpu here')
 
-    def propagate(self, initial_state, actions):
+    def propagate(self, initial_state, actions, dev='cuda:0'):
         """
         :param initial_state: the original state, is common to all future net
         :param actions: this comes from the cem: [ 1 x (act*horizons)]  <--- this will be call for pop size
         :return: mean Q_val for net aka mean of rewards
         """
-        X = torch.zeros((self.num_particles, self.obs_dim + self.action_dim))
-        Y = torch.zeros((self.num_particles, self.obs_dim + 1))  # 1 AKA reward
+        X = torch.zeros((self.num_particles, self.obs_dim + self.action_dim), device=dev)
+        Y = torch.zeros((self.num_particles, self.obs_dim + 1), device=dev)  # 1 AKA reward
         X[:, :self.obs_dim] = initial_state
-        rewards = torch.zeros(self.num_particles)
+        rewards = torch.zeros(self.num_particles, device=dev)
 
         with torch.no_grad():
 
-            for h in range(actions.shape[1]//4):  # AKA horizon
+            for h in range(actions.shape[0]//4):  # AKA horizon
                 # add action to propagate
-                X[:, self.obs_dim:] = actions[h*self.action_dim: h+1*self.action_dim]
+                a = actions[h*self.action_dim: h+1*self.action_dim]
+                X[:, self.obs_dim:] = actions[h*self.action_dim: (h+1)*self.action_dim]
                 for row_idx, x in enumerate(X):
                     Y[row_idx] = self.deterministic_nets[row_idx](x)
 
@@ -64,7 +65,8 @@ class Propagation_net:
 
 
     def infer(self, init_state):
-
+        pass
+        '''
         reward = torch.tensor(INSERIRE DIM)
         for action_seq_idx, seq in enumerate(...) :  #call the cem? pass by params? btw, iterate over population
             self.sample_nets() # load weight for all the net
@@ -73,34 +75,48 @@ class Propagation_net:
 
         # do i want to do a separeate plan step where i take the elite action?
         # should i do all here?
+        '''
+    def sample_weight(self):
+      w = []
+      for model in self.deterministic_nets:
+        w.append(model.state_dict())
+      return w
+    
+    def load_sample(self, w):
+      for id, parameters in enumerate(w):
+        self.deterministic_nets[id].load_state_dict(parameters)
+
+if __name__ == "__main__":
+
+  import time
+  dev = 'cuda:0'
+
+
+  prop_net = Propagation_net()
+  W = prop_net.sample_weight()
+
+  init_s = torch.randn(39)
+  act_seq = torch.randn(4*20)
+
+  t = time.time()
+  prop_net.load_sample(W)
+  prop_net.propagate(init_s, act_seq, dev='cpu')
+  print('cpu: ', time.time()-t )
 
 
 
+  init_s = init_s.to(dev)
+  act_seq = act_seq.to(dev)
+  prop_net.model_to_gpu()
 
+  t = time.time()
+  prop_net.load_sample(W)
+  prop_net.propagate(init_s, act_seq)
+  print('gpu: ', time.time() - t )
 
-
-
-
-if __name__ == '__main__':
-    import time
-    dev = 'cuda:0'
-    lin_net1 = LinNet()
-    lin_net2 = LinNet()
-    lin_net1 = lin_net1.to(dev)
-    lin_net2 = lin_net2.to(dev)
-    x = torch.randn(10).to(dev)
-    t = time.time()
-    lin_net1(x)
-    lin_net2(x)
-    print('2 separate model : ', time.time() - t)
-    #print(out_base.shape, out_base)
-    time.sleep(1)
-
-    x1, x2 = torch.randn(10), torch.randn(10)
-    multinet = Propagation_net()
-    multinet.model_to_gpu()
-    #x1, x2 = x1.to(dev), x2.to(dev)
-    t = time.time()
-    #multinet.fake_forward(x1, x2)
-    print('only 1 model :', time.time() - t)
-    time.sleep(1)
+  # time to add :
+  # for each plan step: pop size = 500 ---> 500 x propagation time
+  # + load all 50 model for each step of 500
+  # 
+  # cpu:  0.13980364799499512
+  # gpu:  0.21935749053955078
