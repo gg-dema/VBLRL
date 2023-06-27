@@ -3,7 +3,7 @@ from cem_optimizer import CEM_opt
 from threading import Thread
 import numpy as np
 import torch
-
+from numba import jit
 _DEVICE = 'cuda:0' if torch.cuda.is_available() else 'cpu'
 
 class Planner:
@@ -45,6 +45,8 @@ class Planner:
 
     def eval_action_seq(self, state, action_sequence):
         rewards = [None]*self.num_particles
+        threads = []
+
         for i in range(self.num_particles):
             t = Thread(target=self.propagate,
                        args=(self.dynamic.sample_linear_net_functional('cpu'),
@@ -54,17 +56,21 @@ class Planner:
                              i)
                        )
             t.start()
+            threads.append(t)
+
+        for t in threads:
             t.join()
+
         return sum(rewards)/self.num_particles
 
     def propagate(self, dynamic, action_seq, state, rewards_array, index):
         state = torch.from_numpy(state)
         r_tot = 0
         obs_shape = state.shape[0]
-        for act in action_seq:
+        for h, act in enumerate(action_seq):
             x = torch.concatenate((state, torch.from_numpy(act)))
             y = dynamic(x)
-            state, reward = y[:obs_shape], y[-1]
+            state, reward = y[:obs_shape], y[-1]*(h**0.99)
             r_tot += reward.item()
         rewards_array[index] = r_tot/action_seq.shape[0]
 
@@ -90,8 +96,8 @@ if __name__ == '__main__':
     planner = Planner(dynam,
                       action_dim=action_space_shape,
                       plan_horizon=20,
-                      num_particles=30,
-                      num_sequence_action=200)
+                      num_particles=50,
+                      num_sequence_action=500)
 
     # piu particelle : migliore stima della Q funct
     # maggior num seq action : maggior varieta' nella stima delle azioni possibili (?)

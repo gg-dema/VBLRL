@@ -2,21 +2,33 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+
+
 class LinNet(nn.Module):
 
-    def __init__(self):
+    def __init__(self, action_dim=4, obs_dim=39, reward_dim=1):
         super(LinNet, self).__init__()
 
-        self.l1 = nn.Linear(43, 128)
-        self.l2 = nn.Linear(128, 256)
-        self.l3 = nn.Linear(256, 128)
-        self.l4 = nn.Linear(128, 40)
+        self.in_features = action_dim + obs_dim
+        self.h1_in_features = 128
+        self.h1_out_features = 256
+        self.h2_in_features = self.h1_out_features
+        self.h2_out_features = 128
+        self.out_features = obs_dim + reward_dim
+
+        self.input_layer = nn.Linear(self.in_features, self.h1_in_features)
+        self.hidden1_layer = nn.Linear(self.h1_in_features, self.h1_out_features)
+        self.hidden2_layer = nn.Linear(self.h2_in_features, self.h2_out_features)
+        self.output_layer = nn.Linear(self.h2_out_features, self.out_features)
+
+        for module in self.parameters():
+            module.requires_grad = False
 
     def forward(self, x):
-        x = F.relu(self.l1(x))
-        x = F.relu(self.l2(x))
-        x = F.relu(self.l3(x))
-        return F.tanh(self.l4(x))
+        x = F.relu(self.input_layer(x))
+        x = F.relu(self.hidden1_layer(x))
+        x = F.relu(self.hidden2_layer(x))
+        return self.output_layer(x)
 
 
 class Propagation_net:
@@ -26,7 +38,7 @@ class Propagation_net:
         self.action_dim = action_dim
         self.obs_dim = obs_dim
 
-        self.deterministic_nets = nn.ModuleList()
+        self.deterministic_nets = []
         for i in range(self.num_particles):
             self.deterministic_nets.append(LinNet())
 
@@ -37,6 +49,16 @@ class Propagation_net:
                 self.deterministic_nets[net_idx] = self.deterministic_nets[net_idx].to(dev)
         else:
             print('no gpu here')
+
+    def sample_from(self, bnn):
+        for net in self.deterministic_nets:
+            iterator_layer_bnn = bnn.named_modules()
+            _ = next(iterator_layer_bnn)  # first reference : entire class, discard
+            for name, layer in iterator_layer_bnn:
+                weight, bias = layer.sample_weight(requires_grad=False)
+                net.get_submodule(name).weight = nn.Parameter(weight)
+                net.get_submodule(name).bias = nn.Parameter(bias)
+
 
     def propagate(self, initial_state, actions, dev='cuda:0'):
         """
@@ -51,72 +73,120 @@ class Propagation_net:
 
         with torch.no_grad():
 
-            for h in range(actions.shape[0]//4):  # AKA horizon
+            for h in range(actions.shape[0] // 4):  # AKA horizon
                 # add action to propagate
-                a = actions[h*self.action_dim: h+1*self.action_dim]
-                X[:, self.obs_dim:] = actions[h*self.action_dim: (h+1)*self.action_dim]
+                X[:, self.obs_dim:] = actions[h * self.action_dim: (h + 1) * self.action_dim]
                 for row_idx, x in enumerate(X):
                     Y[row_idx] = self.deterministic_nets[row_idx](x)
+                X[:, :self.obs_dim] = Y[:, :self.obs_dim]  # update state
+                rewards += Y[:, -1]  # collect rewards
 
-                X[:, :self.obs_dim] = Y[:, :self.obs_dim]   # update state
-                rewards += Y[:, -1]                         # collect rewards
-
-        return (rewards/h).mean()
+        return (rewards / h).mean()
 
 
-    def infer(self, init_state):
-        pass
-        '''
-        reward = torch.tensor(INSERIRE DIM)
-        for action_seq_idx, seq in enumerate(...) :  #call the cem? pass by params? btw, iterate over population
-            self.sample_nets() # load weight for all the net
+
+
+'''
+def infer(init_state, cem):  # equivalente a plan step,
+    cem.sample_act()
+    reward = torch.tensor()
+    for action_seq_idx, seq in enumerate(...) :  #call the cem? pass by params? btw, iterate over population
+        self.sample_nets() # load weight for all the net
             reward[action_seq_idx] = self.propagate(init_state, seq)
         # update cem
 
         # do i want to do a separeate plan step where i take the elite action?
         # should i do all here?
-        '''
-    def sample_weight(self):
-      w = []
-      for model in self.deterministic_nets:
-        w.append(model.state_dict())
-      return w
-    
-    def load_sample(self, w):
-      for id, parameters in enumerate(w):
-        self.deterministic_nets[id].load_state_dict(parameters)
+    '''
 
 if __name__ == "__main__":
+    import time
+    from bnn import BNN
+    from cem_optimizer_v2 import CEM_opt
+    import numpy as np
 
-  import time
-  dev = 'cuda:0'
+    torch.set_default_dtype(torch.float64)
+
+    dev = 'cuda:0'
+    num_particles = 50
+    cem = CEM_opt(num_particles)
+    t = time.time()
+    act_sequences = torch.from_numpy(cem.population)
+    r = np.zeros(act_sequences.shape[0])
+    print(time.time()-t)
+    original_model = BNN(action_dim=4, obs_dim=39, reward_dim=1)
+    bnn_path = '/home/dema/PycharmProjects/lifelong_rl/VBLRL_rl_exam/model_stock/world/model_envWorld.pth'
+    original_model.load_state_dict(torch.load(bnn_path, map_location=torch.device('cpu')))
+    prop_net = Propagation_net(num_particles)
+    init_s = torch.randn(39)
 
 
-  prop_net = Propagation_net()
-  W = prop_net.sample_weight()
+    '''
+    #incredibilmente lento, l'ho fatto andare per un 4 minuti, non so a che punto era,
+    # ne con le deepcopy ne senza
+    
+    from multiprocessing import Process
+    from copy import deepcopy
+    
+    def funct_to_parallelize(prop_net, bnn, init_s, act_seq, rew, idx):
+        prop_net.sample_from(bnn)
+        r = prop_net.propagate(init_s, act_seq, dev='cpu')
+        rew[idx] = r.detach().numpy()
 
-  init_s = torch.randn(39)
-  act_seq = torch.randn(4*20)
+    process = []
+    t = time.time()
+    for i, act_seq in enumerate(act_sequences):
+        p = Process(target=funct_to_parallelize, args=(deepcopy(prop_net), deepcopy(original_model), init_s, act_seq, r, i))
+        p.start()
+        process.append(p)
 
-  t = time.time()
-  prop_net.load_sample(W)
-  prop_net.propagate(init_s, act_seq, dev='cpu')
-  print('cpu: ', time.time()-t )
+    for p in process:
+        p.join()
+    
+    print("multithread cpu: ", time.time() - t)
+    print(r != 0)
+    '''
 
 
 
-  init_s = init_s.to(dev)
-  act_seq = act_seq.to(dev)
-  prop_net.model_to_gpu()
+    t = time.time()
+    for idx, act_seq in enumerate(act_sequences):
+        prop_net.sample_from(original_model)
+        r[idx] = prop_net.propagate(init_s, act_seq, dev='cpu')
+        # here should update the cem
+    print('cpu: ', time.time() - t)
+    print(r)
 
-  t = time.time()
-  prop_net.load_sample(W)
-  prop_net.propagate(init_s, act_seq)
-  print('gpu: ', time.time() - t )
 
-  # time to add :
-  # for each plan step: pop size = 500 ---> 500 x propagation time
-  # + load all 50 model for each step of 500
-  # 
-  # cpu:  0.13980364799499512
-  # gpu:  0.21935749053955078
+    '''
+    init_s = init_s.to(dev)
+    original_model = original_model.to(dev)
+    prop_net.model_to_gpu()
+    t = time.time()
+    for act_seq in act_sequences:
+        act_seq = act_seq.to(dev)
+        #prop_net.sample_from(original_model)
+        prop_net.propagate(init_s, act_seq)
+    print('gpu: ', time.time() - t)
+    '''
+
+
+    # time to add :
+    # for each plan step: pop size = 500 ---> 500 x propagation time
+    #
+    # by colab
+    # cpu:  0.13980364799499512
+    # gpu:  0.21935749053955078
+    #
+    # by my pc:
+    # cpu: 0.039
+    # gpu: 0.38
+    #
+    # old method (fake threads):
+    # cpu: 0.1349
+    # gpu: idk
+    #
+    # FULL POWER (all correct parameters)
+    # total rollout in cpu : 34 secondi
+    # total rollout in gpu : 37 secondi
+    # total rollout in cpu fake trheads: 72 secondi

@@ -34,24 +34,25 @@ class BayesLayerWithSample(BayesLinear):
 
         return linear_step
 
-    def sample_weight(self, device):
-        W = {}
+    def sample_weight(self, requires_grad=True):
+        # remove device as args
+        weight, bias = None, None
+
         if self.weight_eps is None:
             weight = (self.weight_mu + torch.exp(self.weight_log_sigma) * torch.randn_like(
                 self.weight_log_sigma)).detach()
         else:
             weight = (self.weight_mu + torch.exp(self.weight_log_sigma) * self.weight_eps).detach()
-        weight = weight.to(device)
-        W['weight'] = weight
+        weight.requires_grad = requires_grad
+
         if self.bias:
             if self.bias_eps is None:
                 bias = (self.bias_mu + torch.exp(self.bias_log_sigma) * torch.randn_like(self.bias_log_sigma)).detach()
             else:
                 bias = (self.bias_mu + torch.exp(self.bias_log_sigma) * self.bias_eps).detach()
-            bias = bias.to(device)
-            W['bias'] = bias
+            bias.requires_grad = requires_grad
 
-        return W
+        return weight, bias
 
 
 
@@ -76,7 +77,7 @@ class BNN(BayesModule):
         self.hidden2_layer = BayesLayerWithSample(prior_mu=0, prior_sigma=1,
                                             in_features=self.h2_in_features,
                                             out_features=self.h2_out_features)
-        self.ouput_layer = BayesLayerWithSample(prior_mu=0, prior_sigma=1,
+        self.output_layer = BayesLayerWithSample(prior_mu=0, prior_sigma=1,
                                           in_features=self.h2_out_features,
                                           out_features=self.out_features)
 
@@ -87,7 +88,7 @@ class BNN(BayesModule):
         x = relu(self.input_layer(x))
         x = relu(self.hidden1_layer(x))
         x = relu(self.hidden2_layer(x))
-        x = self.ouput_layer(x)
+        x = self.output_layer(x)
         return x
 
     def copy_params_from_world_model(self, W):
@@ -108,10 +109,11 @@ class BNN(BayesModule):
 
         return forward_with_sample
 
-    def sample_linear_net_weight(self, device):
+    # forse rimuovere questa e' una buona idea
+    def sample_linear_net_weight(self):
         params = OrderedDict()
         for name, layer in self._modules.items():
-            dict_forlayer = layer.sample_weight(device)
+            dict_forlayer = layer.sample_weight()
             for tensor_name, tensor in dict_forlayer.items():
                 params[name+'.'+tensor_name] = tensor
         return params
