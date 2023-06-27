@@ -3,7 +3,7 @@ from cem_optimizer import CEM_opt
 from threading import Thread
 import numpy as np
 import torch
-from numba import jit
+
 _DEVICE = 'cuda:0' if torch.cuda.is_available() else 'cpu'
 
 class Planner:
@@ -12,7 +12,6 @@ class Planner:
                  action_dim=4,
                  plan_horizon=20,
                  num_particles=50,
-                 num_sequence_action=50,
                  num_elite=30,
                  env_action_space_shape=4,
                  env_obs_space_shape=39,
@@ -23,13 +22,13 @@ class Planner:
         self.action_dim = action_dim
         self.plan_horizon = plan_horizon
         self.num_particles = num_particles
-        self.num_sequence_action = num_sequence_action
+        self.num_sequence_action = num_particles
         self.env_action_space_shape = env_action_space_shape
         self.env_obs_space_shape = env_obs_space_shape
 
         # NOT Sure on pop shape
         self.cem = CEM_opt(population_shape=(action_dim*plan_horizon),
-                           num_population=num_sequence_action,
+                           num_population=num_particles,
                            num_elite=num_elite)
 
 
@@ -96,9 +95,8 @@ if __name__ == '__main__':
     planner = Planner(dynam,
                       action_dim=action_space_shape,
                       plan_horizon=20,
-                      num_particles=50,
-                      num_sequence_action=500)
-
+                      num_particles=500
+                      )
     # piu particelle : migliore stima della Q funct
     # maggior num seq action : maggior varieta' nella stima delle azioni possibili (?)
     # plan_horizon :

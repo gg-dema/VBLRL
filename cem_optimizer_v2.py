@@ -18,20 +18,20 @@ class CEM_opt:
         self.min = -1
         self.max = +1
 
-        self.generate_population()
+        self._generate_population()
 
-    def generate_population(self):
+    def _generate_population(self):
         for i in range(self.population.shape[0]):
-            self.population[i] = self.generate_one_action_seq()
+            self.population[i] = self._generate_one_action_seq()
 
-    def generate_one_action_seq(self):
+    def _generate_one_action_seq(self):
         return np.clip(self.mean_vect + np.random.randn(self.action_seq_len)*0.8, self.min, self.max)
 
     def update(self, rewards: np.array):
         elite_idx = rewards.argsort()[-self.num_elite:]
         elite_weights = self.population[elite_idx]
         self.mean_vect = elite_weights.mean(axis=0)
-        self.generate_population()
+        self._generate_population()
 
     def solutions(self):
         return self.mean_vect

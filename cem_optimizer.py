@@ -16,10 +16,10 @@ class CEM_opt:
         self.num_population = num_population
         self.population_shape = population_shape
         self.mean_vect = np.zeros(self.population_shape)
-        self.std = np.ones(self.population_shape)*0.5
-
+        self.min = -1.
+        self.max = 1.
         self.population = [
-            self.mean_vect + np.random.rand(self.population_shape)*self.std
+            self.mean_vect + np.random.rand(self.population_shape)*0.8
             for _ in range(self.num_population)
         ]
 
@@ -27,12 +27,13 @@ class CEM_opt:
         elite_idxs = np.array(rewards).argsort()[-self.num_elite:]
         elite_weights = [self.population[idx] for idx in elite_idxs]
         self.mean_vect = np.array(elite_weights).mean(axis=0)
-        self.std = np.array(elite_weights).std(axis=0)
 
         self.population = [
-            self.mean_vect + np.random.rand(self.population_shape)*self.std
+            np.clip(self.mean_vect + np.random.rand(self.population_shape)*0.8, self.min, self.max)
             for _ in range(self.num_population)
         ]
+
+
     @property
     def solution(self):
         return self.mean_vect

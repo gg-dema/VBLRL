@@ -42,13 +42,9 @@ class Propagation_net:
         for i in range(self.num_particles):
             self.deterministic_nets.append(LinNet())
 
-    def model_to_gpu(self):
-        if torch.cuda.is_available():
-            dev = 'cuda:0'
-            for net_idx in range(self.num_particles):
-                self.deterministic_nets[net_idx] = self.deterministic_nets[net_idx].to(dev)
-        else:
-            print('no gpu here')
+    def move_to_gpu(self):
+        for net_idx in range(self.num_particles):
+            self.deterministic_nets[net_idx] = self.deterministic_nets[net_idx].to('cuda:0')
 
     def sample_from(self, bnn):
         for net in self.deterministic_nets:
@@ -64,7 +60,7 @@ class Propagation_net:
         """
         :param initial_state: the original state, is common to all future net
         :param actions: this comes from the cem: [ 1 x (act*horizons)]  <--- this will be call for pop size
-        :return: mean Q_val for net aka mean of rewards
+        :return: Q_val
         """
         X = torch.zeros((self.num_particles, self.obs_dim + self.action_dim), device=dev)
         Y = torch.zeros((self.num_particles, self.obs_dim + 1), device=dev)  # 1 AKA reward
@@ -84,20 +80,6 @@ class Propagation_net:
         return (rewards / h).mean()
 
 
-
-
-'''
-def infer(init_state, cem):  # equivalente a plan step,
-    cem.sample_act()
-    reward = torch.tensor()
-    for action_seq_idx, seq in enumerate(...) :  #call the cem? pass by params? btw, iterate over population
-        self.sample_nets() # load weight for all the net
-            reward[action_seq_idx] = self.propagate(init_state, seq)
-        # update cem
-
-        # do i want to do a separeate plan step where i take the elite action?
-        # should i do all here?
-    '''
 
 if __name__ == "__main__":
     import time
@@ -122,8 +104,8 @@ if __name__ == "__main__":
 
 
     '''
-    #incredibilmente lento, l'ho fatto andare per un 4 minuti, non so a che punto era,
-    # ne con le deepcopy ne senza
+    # incredibilmente lento, l'ho fatto andare per un 4 minuti, non so a che punto era,
+    # non va ne con le deepcopy ne senza
     
     from multiprocessing import Process
     from copy import deepcopy
@@ -153,9 +135,10 @@ if __name__ == "__main__":
     for idx, act_seq in enumerate(act_sequences):
         prop_net.sample_from(original_model)
         r[idx] = prop_net.propagate(init_s, act_seq, dev='cpu')
-        # here should update the cem
+        # here update the cem
     print('cpu: ', time.time() - t)
     print(r)
+
 
 
     '''
@@ -172,21 +155,21 @@ if __name__ == "__main__":
 
 
     # time to add :
-    # for each plan step: pop size = 500 ---> 500 x propagation time
     #
-    # by colab
+    #
+    # 50 particles by colab
     # cpu:  0.13980364799499512
     # gpu:  0.21935749053955078
     #
-    # by my pc:
+    # 50 particles by my pc:
     # cpu: 0.039
     # gpu: 0.38
     #
-    # old method (fake threads):
+    # 50 particles old method (fake threads):
     # cpu: 0.1349
     # gpu: idk
     #
-    # FULL POWER (all correct parameters)
+    # FULL POWER (all correct parameters : 500 particles)
     # total rollout in cpu : 34 secondi
     # total rollout in gpu : 37 secondi
-    # total rollout in cpu fake trheads: 72 secondi
+    # total rollout in cpu fake threads: 72 secondi
