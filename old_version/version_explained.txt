@@ -1,0 +1,12 @@
+planner:
+    planner v1: just deleted, it does not working, idk what i did here
+    planner v2: sequential rollout
+    planner v3: propagation (rollout) using fake thread
+    planner v4: insert the propagation_model inside the planner >>> the plan step return the entire vector of act
+                                                                    the responsability for re_plan should be in the main
+
+
+optimizer:
+    optimizer v1: base
+    optimizer v2: vectorized (all to numpy array format, before: common list)
+

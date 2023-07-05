@@ -1,0 +1,66 @@
+env 7 : envs : <AssemblyV2GoalObservable instance> : min_rew=0.0, max_rew=1.890603529020353 (horizon=40)
+env 40 : envs : <BasketballV2GoalObservable instance> : min_rew=4.5009920309210244e-05, max_rew=1.889062976229862 (horizon=40)
+env 12 : envs : <BinPickingV2GoalObservable instance> : min_rew=7.272644318768328e-05, max_rew=0.1920615092741776 (horizon=40)
+env 47 : envs : <BoxCloseV2GoalObservable instance> : min_rew=0.3625010755074006, max_rew=1.999411786841627 (horizon=40)
+env 27 : envs : <ButtonPressTopdownV2GoalObservable instance> : min_rew=0.3536290840196402, max_rew=3.1761240163333793 (horizon=40)
+env 21 : envs : <ButtonPressTopdownWallV2GoalObservable instance> : min_rew=0.30493587884400974, max_rew=3.378365322517079 (horizon=40)
+env 37 : envs : <ButtonPressV2GoalObservable instance> : min_rew=0.3297556294603084, max_rew=9.19434494330089 (horizon=40)
+env 29 : envs : <ButtonPressWallV2GoalObservable instance> : min_rew=0.06134108247752184, max_rew=8.39440127052135 (horizon=40)
+env 36 : envs : <CoffeeButtonV2GoalObservable instance> : min_rew=0.33107176084673356, max_rew=9.926867329987283 (horizon=40)
+env 42 : envs : <CoffeePullV2GoalObservable instance> : min_rew=0.04557829012853086, max_rew=0.11583408269266393 (horizon=40)
+env 14 : envs : <CoffeePushV2GoalObservable instance> : min_rew=0.032573379173558806, max_rew=2.6044924936536558 (horizon=40)
+env 6 : envs : <DialTurnV2GoalObservable instance> : min_rew=0.0, max_rew=3.286102700500124 (horizon=40)
+env 44 : envs : <DisassembleV2GoalObservable instance> : min_rew=0.36629126929767525, max_rew=0.3885103441698693 (horizon=40)
+env 45 : envs : <DoorCloseV2GoalObservable instance> : min_rew=0.056216563893492374, max_rew=5.838861854475179 (horizon=40)
+env 38 : envs : <DoorLockV2GoalObservable instance> : min_rew=1.020514117436946, max_rew=3.149308873284654 (horizon=40)
+env 20 : envs : <DoorOpenV2GoalObservable instance> : min_rew=0.43629362997400456, max_rew=3.641910043143426 (horizon=40)
+env 30 : envs : <DoorUnlockV2GoalObservable instance> : min_rew=0.9308840894737328, max_rew=2.7333431366572434 (horizon=40)
+env 13 : envs : <HandInsertV2GoalObservable instance> : min_rew=0.0015955707660961125, max_rew=2.9943129427339024 (horizon=40)
+env 8 : envs : <DrawerCloseV2GoalObservable instance> : min_rew=0.0, max_rew=10.0 (horizon=40)
+env 15 : envs : <DrawerOpenV2GoalObservable instance> : min_rew=1.0859547630847937, max_rew=5.636826720883263 (horizon=40)
+env 9 : envs : <FaucetOpenV2GoalObservable instance> : min_rew=2.6443811933333063, max_rew=4.2773561797406465 (horizon=40)
+env 49 : envs : <FaucetCloseV2GoalObservable instance> : min_rew=2.493549320082007, max_rew=4.336873017156616 (horizon=40)
+env 32 : envs : <HammerV2GoalObservable instance> : min_rew=0.6965016996485008, max_rew=1.3948782990359292 (horizon=40)
+env 34 : envs : <HandlePressSideV2GoalObservable instance> : min_rew=0.26395720247723037, max_rew=10 (horizon=40)
+env 26 : envs : <HandlePressV2GoalObservable instance> : min_rew=0.0918422697138388, max_rew=10 (horizon=40)
+env 23 : envs : <HandlePullSideV2GoalObservable instance> : min_rew=0.018351347654526208, max_rew=0.17636702636647547 (horizon=40)
+env 17 : envs : <HandlePullV2GoalObservable instance> : min_rew=0.046520956721322324, max_rew=3.8579252235091395 (horizon=40)
+env 33 : envs : <LeverPullV2GoalObservable instance> : min_rew=0.49972644833981994, max_rew=1.299748191540588 (horizon=40)
+env 28 : envs : <PegInsertSideV2GoalObservable instance> : min_rew=0.0004010080128659551, max_rew=0.0534141951378744 (horizon=40)
+env 3 : envs : <PickPlaceWallV2GoalObservable instance> : min_rew=0.0, max_rew=0 (horizon=40)
+env 31 : envs : <PickOutOfHoleV2GoalObservable instance> : min_rew=0.011346376254240911, max_rew=0.02189764951959615 (horizon=40)
+env 46 : envs : <ReachV2GoalObservable instance> : min_rew=1.368194739573375, max_rew=10.0 (horizon=40)
+env 10 : envs : <PushBackV2GoalObservable instance> : min_rew=0.012242325160956306, max_rew=0.020009670427489117 (horizon=40)
+env 18 : envs : <PushV2GoalObservable instance> : min_rew=0.02789181324340892, max_rew=5.174274307226557 (horizon=40)
+env 48 : envs : <PickPlaceV2GoalObservable instance> : min_rew=3.432553250645819e-05, max_rew=0.14248627055122665 (horizon=40)
+env 35 : envs : <PlateSlideV2GoalObservable instance> : min_rew=0.8337378593323893, max_rew=6.771987876738481 (horizon=40)
+env 4 : envs : <PlateSlideSideV2GoalObservable instance> : min_rew=0.2483075615519872, max_rew=4.461138956031297 (horizon=40)
+env 1 : envs : <PlateSlideBackV2GoalObservable instance> : min_rew=0.188174772033192, max_rew=6.997824249895015 (horizon=40)
+env 11 : envs : <PlateSlideBackSideV2GoalObservable instance> : min_rew=0.28109283544036906, max_rew=3.8301169517009575 (horizon=40)
+env 16 : envs : <PegUnplugSideV2GoalObservable instance> : min_rew=0.030491649472795288, max_rew=0.05263465530175845 (horizon=40)
+env 5 : envs : <SoccerV2GoalObservable instance> : min_rew=0.00047538266792206916, max_rew=3.2026502728410153 (horizon=40)
+env 24 : envs : <StickPushV2GoalObservable instance> : min_rew=3.471961576215647e-06, max_rew=0.5273324776487718 (horizon=40)
+env 41 : envs : <StickPullV2GoalObservable instance> : min_rew=1.2457400373918915e-05, max_rew=0.08969249336683162 (horizon=40)
+env 43 : envs : <PushWallV2GoalObservable instance> : min_rew=2.4989565400752547e-06, max_rew=3.1278203428340543 (horizon=40)
+env 25 : envs : <ReachWallV2GoalObservable instance> : min_rew=1.4151659458372805, max_rew=10.0 (horizon=40)
+env 2 : envs : <ShelfPlaceV2GoalObservable instance> : min_rew=0.0, max_rew=0 (horizon=40)
+env 50 : envs : <SweepIntoV2GoalObservable instance> : min_rew=8.386781497868965e-05, max_rew=2.8910304060085457 (horizon=40)
+env 39 : envs : <SweepV2GoalObservable instance> : min_rew=1.6386527220072793e-07, max_rew=1.7160967091647616 (horizon=40)
+env 19 : envs : <WindowOpenV2GoalObservable instance> : min_rew=0.41223953416573317, max_rew=1.5813810771206427 (horizon=40)
+env 22 : envs : <WindowCloseV2GoalObservable instance> : min_rew=0.5391996931443853, max_rew=1.1362087083838361 (horizon=40)
+
+
+envs_name = [
+    'button-press-v2-goal-observable',  # rew 9.19
+    'button-press-wall-v2-goal-observable',  # rew 8.39,
+    'coffee-button-v2-goal-observable',  # rew 9.26
+    'door-close-v2-goal-observable',  # rew 5.83
+    'handle-press-v2-goal-observable', # rew 10
+    'handle-press-side-v2-goal-observable', #rew 10
+    'reach-wall-v2-goal-observable', #rew 10
+    'plate-slide-back-v2-goal-observable', # rew 6.99
+    'plate-slide-side-v2-goal-observable', # rew 4.46
+    'plate-slide-v2-goal-observable', # rew 6.77
+    'push-v2-goal-observable', # rew 5.17
+    'reach-v2-goal-observable', # rew 10
+]
