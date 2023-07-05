@@ -60,16 +60,7 @@ class MultiEnvReplayBuffer:
         next_states = np.array([t[3] for t in transitions], dtype=np.float64)
         dones = np.array([t[4] for t in transitions])
         return states, actions, rewards, next_states, dones
-        '''xcept ValueError:
-            x = [t[0] for t in transitions]
-            count_error = 0
-            for elem in x:
-                if not len(elem) == 39:
-                    count_error += 1
-                    print(elem)
-            print(count_error)
-            print('same dim for all element: ', all([len(x[i]) == 39 for i in range(len(x))]))
-            '''
+
     def _initialize_empty_buffer(self):
         self.buffers = defaultdict(lambda: deque(maxlen=self.buffer_size_per_env))
 
@@ -103,6 +94,4 @@ class MultiEnvReplayBuffer:
                 temp_buff = pickle.load(local_buff)
                 self.buffers[int(k)] += temp_buff
                 self.elem_for_buffer[int(k)] = len(self.buffers[int(k)])
-
-
 

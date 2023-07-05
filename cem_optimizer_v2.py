@@ -15,22 +15,28 @@ class CEM_opt:
         self.percent_elite = percent_elite
         self.num_elite = int(num_action_seq * percent_elite)
         self.mean_vect = np.zeros(self.action_seq_len)
+        self.std_vect = np.ones(self.action_seq_len)*0.5
         self.min = -1
         self.max = +1
-
+        self.interpolation_coef = 0.0
         self._generate_population()
 
     def _generate_population(self):
-        for i in range(self.population.shape[0]):
-            self.population[i] = self._generate_one_action_seq()
+            for i in range(self.population.shape[0]):
+                self.population[i] = self._generate_one_action_seq()
 
     def _generate_one_action_seq(self):
-        return np.clip(self.mean_vect + np.random.randn(self.action_seq_len)*0.8, self.min, self.max)
+        return np.clip(
+            self.mean_vect + np.random.randn(self.action_seq_len)*self.std_vect,
+            self.min,
+            self.max)
 
     def update(self, rewards: np.array):
         elite_idx = rewards.argsort()[-self.num_elite:]
         elite_weights = self.population[elite_idx]
-        self.mean_vect = elite_weights.mean(axis=0)
+        self.mean_vect = self.mean_vect*self.interpolation_coef + (1 - self.interpolation_coef)*elite_weights.mean(axis=0)
+        self.std_vect = self.std_vect*self.interpolation_coef + (1 - self.interpolation_coef)*elite_weights.std(axis=0)
+        self.std_vect = np.clip(self. std_vect, 0.5, 1)
         self._generate_population()
 
     def solutions(self):

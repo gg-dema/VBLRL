@@ -10,16 +10,15 @@ class LinNet(nn.Module):
         super(LinNet, self).__init__()
 
         self.in_features = action_dim + obs_dim
-        self.h1_in_features = 128
-        self.h1_out_features = 256
-        self.h2_in_features = self.h1_out_features
-        self.h2_out_features = 128
         self.out_features = obs_dim + reward_dim
 
-        self.input_layer = nn.Linear(self.in_features, self.h1_in_features)
-        self.hidden1_layer = nn.Linear(self.h1_in_features, self.h1_out_features)
-        self.hidden2_layer = nn.Linear(self.h2_in_features, self.h2_out_features)
-        self.output_layer = nn.Linear(self.h2_out_features, self.out_features)
+        self.input_layer = nn.Linear(in_features=self.in_features, out_features=128)
+        self.hidden1_layer = nn.Linear(in_features=128, out_features=256)
+        self.hidden2_layer = nn.Linear(in_features=256, out_features=256)
+        self.hidden3_layer = nn.Linear(in_features=256, out_features=512)
+        self.hidden4_layer = nn.Linear(in_features=512, out_features=512)
+
+        self.output_layer = nn.Linear(in_features=512, out_features=self.out_features)
 
         for module in self.parameters():
             module.requires_grad = False
@@ -28,6 +27,8 @@ class LinNet(nn.Module):
         x = F.relu(self.input_layer(x))
         x = F.relu(self.hidden1_layer(x))
         x = F.relu(self.hidden2_layer(x))
+        x = F.relu(self.hidden3_layer(x))
+        x = F.relu(self.hidden4_layer(x))
         return self.output_layer(x)
 
 
@@ -97,8 +98,8 @@ if __name__ == "__main__":
     r = np.zeros(act_sequences.shape[0])
     print(time.time()-t)
     original_model = BNN(action_dim=4, obs_dim=39, reward_dim=1)
-    bnn_path = '/home/dema/PycharmProjects/lifelong_rl/VBLRL_rl_exam/model_stock/world/model_envWorld.pth'
-    original_model.load_state_dict(torch.load(bnn_path, map_location=torch.device('cpu')))
+    #bnn_path = '/home/dema/PycharmProjects/lifelong_rl/VBLRL_rl_exam/model_stock/world/model_envWorld.pth'
+    #original_model.load_state_dict(torch.load(bnn_path, map_location=torch.device('cpu')))
     prop_net = Propagation_net(num_particles)
     init_s = torch.randn(39)
 
@@ -158,7 +159,6 @@ if __name__ == "__main__":
     #
     #
     # 50 particles by colab
-    # cpu:  0.13980364799499512
     # gpu:  0.21935749053955078
     #
     # 50 particles by my pc:
