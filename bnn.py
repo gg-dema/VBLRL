@@ -34,22 +34,21 @@ class BayesLayerWithSample(BayesLinear):
 
         return linear_step
 
-    def sample_weight(self, requires_grad=True):
-        # remove device as args
+    def sample_weight(self, requires_grad=False, var_in_out=0.1 ):
         weight, bias = None, None
 
         if self.weight_eps is None:
             weight = (self.weight_mu + torch.exp(self.weight_log_sigma) * torch.randn_like(
-                self.weight_log_sigma)).detach()
+                self.weight_log_sigma)*var_in_out).detach()
         else:
-            weight = (self.weight_mu + torch.exp(self.weight_log_sigma) * self.weight_eps).detach()
+            weight = (self.weight_mu + torch.exp(self.weight_log_sigma) * self.weight_eps*var_in_out).detach()
         weight.requires_grad = requires_grad
 
         if self.bias:
             if self.bias_eps is None:
-                bias = (self.bias_mu + torch.exp(self.bias_log_sigma) * torch.randn_like(self.bias_log_sigma)).detach()
+                bias = (self.bias_mu + torch.exp(self.bias_log_sigma) * torch.randn_like(self.bias_log_sigma)*var_in_out).detach()
             else:
-                bias = (self.bias_mu + torch.exp(self.bias_log_sigma) * self.bias_eps).detach()
+                bias = (self.bias_mu + torch.exp(self.bias_log_sigma) * self.bias_eps*var_in_out).detach()
             bias.requires_grad = requires_grad
 
         return weight, bias
@@ -63,12 +62,10 @@ class BNN(BayesModule):
         self.in_features = action_dim + obs_dim
         self.out_features = obs_dim + reward_dim
 
-        self.input_layer = BayesLayerWithSample(prior_mu=0, prior_sigma=1, in_features=self.in_features, out_features=128)
-        self.hidden1_layer = BayesLayerWithSample(prior_mu=0, prior_sigma=1, in_features=128, out_features=256)
-        self.hidden2_layer = BayesLayerWithSample(prior_mu=0, prior_sigma=1, in_features=256, out_features=256)
-        self.hidden3_layer = BayesLayerWithSample(prior_mu=0, prior_sigma=1, in_features=256, out_features=512)
-        self.hidden4_layer = BayesLayerWithSample(prior_mu=0, prior_sigma=1, in_features=512, out_features=512)
-        self.output_layer = BayesLayerWithSample(prior_mu=0, prior_sigma=1,  in_features=512, out_features=self.out_features)
+        self.input_layer = BayesLayerWithSample(prior_mu=0, prior_sigma=0.5, in_features=self.in_features, out_features=128)
+        self.hidden1_layer = BayesLayerWithSample(prior_mu=0, prior_sigma=0.5, in_features=128, out_features=128)
+        self.hidden2_layer = BayesLayerWithSample(prior_mu=0, prior_sigma=0.5, in_features=128, out_features=128)
+        self.output_layer = BayesLayerWithSample(prior_mu=0, prior_sigma=0.5,  in_features=128, out_features=self.out_features)
 
         if weight:
             self.copy_params_from_model(weight)
@@ -77,8 +74,6 @@ class BNN(BayesModule):
         x = relu(self.input_layer(x))
         x = relu(self.hidden1_layer(x))
         x = relu(self.hidden2_layer(x))
-        x = relu(self.hidden3_layer(x))
-        x = relu(self.hidden4_layer(x))
         x = self.output_layer(x)
         return x
 

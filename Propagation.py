@@ -14,11 +14,8 @@ class LinNet(nn.Module):
 
         self.input_layer = nn.Linear(in_features=self.in_features, out_features=128)
         self.hidden1_layer = nn.Linear(in_features=128, out_features=256)
-        self.hidden2_layer = nn.Linear(in_features=256, out_features=256)
-        self.hidden3_layer = nn.Linear(in_features=256, out_features=512)
-        self.hidden4_layer = nn.Linear(in_features=512, out_features=512)
-
-        self.output_layer = nn.Linear(in_features=512, out_features=self.out_features)
+        self.hidden2_layer = nn.Linear(in_features=128, out_features=128)
+        self.output_layer = nn.Linear(in_features=128, out_features=self.out_features)
 
         for module in self.parameters():
             module.requires_grad = False
@@ -27,8 +24,6 @@ class LinNet(nn.Module):
         x = F.relu(self.input_layer(x))
         x = F.relu(self.hidden1_layer(x))
         x = F.relu(self.hidden2_layer(x))
-        x = F.relu(self.hidden3_layer(x))
-        x = F.relu(self.hidden4_layer(x))
         return self.output_layer(x)
 
 
@@ -154,22 +149,22 @@ if __name__ == "__main__":
     print('gpu: ', time.time() - t)
     '''
 
+    #
+    # 50 particles by colab for 1 action_sequence PropNet:
+    # cpu:  0.18
+    # gpu:  0.22
 
-    # time to add :
-    #
-    #
-    # 50 particles by colab
-    # gpu:  0.21935749053955078
-    #
-    # 50 particles by my pc:
+    # 50 particles by my pc for 1 action_sequence PropNet:
     # cpu: 0.039
     # gpu: 0.38
-    #
-    # 50 particles old method (fake threads):
+
+    # 50 particles for 1 action_sequence old method (threads):
     # cpu: 0.1349
     # gpu: idk
-    #
-    # FULL POWER (all correct parameters : 500 particles)
-    # total rollout in cpu : 34 secondi
-    # total rollout in gpu : 37 secondi
-    # total rollout in cpu fake threads: 72 secondi
+
+    # FULL POWER (all correct parameters : 500 act_seq, 50 particles)
+    # total rollout in cpu PropNet (my pc) : 34 sec
+    # total rollout in gpu PropNet (my pc) : 37 sec
+    # total rollout in cpu fake threads (my pc): 72 sec
+    # total rollout in cpu sequential no re-plan (my pc): 85 sec
+    # total rollout in cpu sequential re-plan (my pc): ~ 5 min
