@@ -3,9 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 
-
 class LinNet(nn.Module):
-
     def __init__(self, action_dim=4, obs_dim=39, reward_dim=1):
         super(LinNet, self).__init__()
 
@@ -29,7 +27,6 @@ class LinNet(nn.Module):
 
 class Propagation_net:
     def __init__(self, num_particles=50, action_dim=4, obs_dim=39):
-
         self.num_particles = num_particles
         self.action_dim = action_dim
         self.obs_dim = obs_dim
@@ -40,7 +37,9 @@ class Propagation_net:
 
     def move_to_gpu(self):
         for net_idx in range(self.num_particles):
-            self.deterministic_nets[net_idx] = self.deterministic_nets[net_idx].to('cuda:0')
+            self.deterministic_nets[net_idx] = self.deterministic_nets[net_idx].to(
+                "cuda:0"
+            )
 
     def sample_from(self, bnn):
         for net in self.deterministic_nets:
@@ -51,30 +50,33 @@ class Propagation_net:
                 net.get_submodule(name).weight = nn.Parameter(weight)
                 net.get_submodule(name).bias = nn.Parameter(bias)
 
-
-    def propagate(self, initial_state, actions, dev='cuda:0'):
+    def propagate(self, initial_state, actions, dev="cuda:0"):
         """
         :param initial_state: the original state, is common to all future net
         :param actions: this comes from the cem: [ 1 x (act*horizons)]  <--- this will be call for pop size
         :return: Q_val
         """
-        X = torch.zeros((self.num_particles, self.obs_dim + self.action_dim), device=dev)
-        Y = torch.zeros((self.num_particles, self.obs_dim + 1), device=dev)  # 1 AKA reward
-        X[:, :self.obs_dim] = initial_state
+        X = torch.zeros(
+            (self.num_particles, self.obs_dim + self.action_dim), device=dev
+        )
+        Y = torch.zeros(
+            (self.num_particles, self.obs_dim + 1), device=dev
+        )  # 1 AKA reward
+        X[:, : self.obs_dim] = initial_state
         rewards = torch.zeros(self.num_particles, device=dev)
 
         with torch.no_grad():
-
             for h in range(actions.shape[0] // 4):  # AKA horizon
                 # add action to propagate
-                X[:, self.obs_dim:] = actions[h * self.action_dim: (h + 1) * self.action_dim]
+                X[:, self.obs_dim :] = actions[
+                    h * self.action_dim : (h + 1) * self.action_dim
+                ]
                 for row_idx, x in enumerate(X):
                     Y[row_idx] = self.deterministic_nets[row_idx](x)
-                X[:, :self.obs_dim] = Y[:, :self.obs_dim]  # update state
+                X[:, : self.obs_dim] = Y[:, : self.obs_dim]  # update state
                 rewards += Y[:, -1]  # collect rewards
 
         return (rewards / h).mean()
-
 
 
 if __name__ == "__main__":
@@ -85,21 +87,20 @@ if __name__ == "__main__":
 
     torch.set_default_dtype(torch.float64)
 
-    dev = 'cuda:0'
+    dev = "cuda:0"
     num_particles = 50
     cem = CEM_opt(num_particles)
     t = time.time()
     act_sequences = torch.from_numpy(cem.population)
     r = np.zeros(act_sequences.shape[0])
-    print(time.time()-t)
+    print(time.time() - t)
     original_model = BNN(action_dim=4, obs_dim=39, reward_dim=1)
-    #bnn_path = '/home/dema/PycharmProjects/lifelong_rl/VBLRL_rl_exam/model_stock/world/model_envWorld.pth'
-    #original_model.load_state_dict(torch.load(bnn_path, map_location=torch.device('cpu')))
+    # bnn_path = '/home/dema/PycharmProjects/lifelong_rl/VBLRL_rl_exam/model_stock/world/model_envWorld.pth'
+    # original_model.load_state_dict(torch.load(bnn_path, map_location=torch.device('cpu')))
     prop_net = Propagation_net(num_particles)
     init_s = torch.randn(39)
 
-
-    '''
+    """
     # incredibilmente lento, l'ho fatto andare per un 4 minuti, non so a che punto era,
     # non va ne con le deepcopy ne senza
     
@@ -123,21 +124,17 @@ if __name__ == "__main__":
     
     print("multithread cpu: ", time.time() - t)
     print(r != 0)
-    '''
-
-
+    """
 
     t = time.time()
     for idx, act_seq in enumerate(act_sequences):
         prop_net.sample_from(original_model)
-        r[idx] = prop_net.propagate(init_s, act_seq, dev='cpu')
+        r[idx] = prop_net.propagate(init_s, act_seq, dev="cpu")
         # here update the cem
-    print('cpu: ', time.time() - t)
+    print("cpu: ", time.time() - t)
     print(r)
 
-
-
-    '''
+    """
     init_s = init_s.to(dev)
     original_model = original_model.to(dev)
     prop_net.model_to_gpu()
@@ -147,7 +144,7 @@ if __name__ == "__main__":
         #prop_net.sample_from(original_model)
         prop_net.propagate(init_s, act_seq)
     print('gpu: ', time.time() - t)
-    '''
+    """
 
     #
     # 50 particles by colab for 1 action_sequence PropNet:

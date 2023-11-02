@@ -7,24 +7,37 @@ from torch.nn.functional import relu
 import torch.nn.functional as F
 import torch
 
+
 class BayesLayerWithSample(BayesLinear):
     """
-        same of BayesLinear from torchbnn, just add the possibility of sample
-        a set of weight from the net. Functional paradigm for calc linear output
+    same of BayesLinear from torchbnn, just add the possibility of sample
+    a set of weight from the net. Functional paradigm for calc linear output
     """
+
     def sample_layer_functional(self, device):
         if self.weight_eps is None:
-            weight = (self.weight_mu + torch.exp(self.weight_log_sigma) * torch.randn_like(
-                self.weight_log_sigma)).detach()
+            weight = (
+                self.weight_mu
+                + torch.exp(self.weight_log_sigma)
+                * torch.randn_like(self.weight_log_sigma)
+            ).detach()
         else:
-            weight = (self.weight_mu + torch.exp(self.weight_log_sigma) * self.weight_eps).detach()
+            weight = (
+                self.weight_mu + torch.exp(self.weight_log_sigma) * self.weight_eps
+            ).detach()
         weight = weight.to(device)
 
         if self.bias:
             if self.bias_eps is None:
-                bias = (self.bias_mu + torch.exp(self.bias_log_sigma) * torch.randn_like(self.bias_log_sigma)).detach()
+                bias = (
+                    self.bias_mu
+                    + torch.exp(self.bias_log_sigma)
+                    * torch.randn_like(self.bias_log_sigma)
+                ).detach()
             else:
-                bias = (self.bias_mu + torch.exp(self.bias_log_sigma) * self.bias_eps).detach()
+                bias = (
+                    self.bias_mu + torch.exp(self.bias_log_sigma) * self.bias_eps
+                ).detach()
             bias = bias.to(device)
         else:
             bias = None
@@ -34,25 +47,39 @@ class BayesLayerWithSample(BayesLinear):
 
         return linear_step
 
-    def sample_weight(self, requires_grad=False, var_in_out=0.1 ):
+    def sample_weight(self, requires_grad=False, var_in_out=0.1):
         weight, bias = None, None
 
         if self.weight_eps is None:
-            weight = (self.weight_mu + torch.exp(self.weight_log_sigma) * torch.randn_like(
-                self.weight_log_sigma)*var_in_out).detach()
+            weight = (
+                self.weight_mu
+                + torch.exp(self.weight_log_sigma)
+                * torch.randn_like(self.weight_log_sigma)
+                * var_in_out
+            ).detach()
         else:
-            weight = (self.weight_mu + torch.exp(self.weight_log_sigma) * self.weight_eps*var_in_out).detach()
+            weight = (
+                self.weight_mu
+                + torch.exp(self.weight_log_sigma) * self.weight_eps * var_in_out
+            ).detach()
         weight.requires_grad = requires_grad
 
         if self.bias:
             if self.bias_eps is None:
-                bias = (self.bias_mu + torch.exp(self.bias_log_sigma) * torch.randn_like(self.bias_log_sigma)*var_in_out).detach()
+                bias = (
+                    self.bias_mu
+                    + torch.exp(self.bias_log_sigma)
+                    * torch.randn_like(self.bias_log_sigma)
+                    * var_in_out
+                ).detach()
             else:
-                bias = (self.bias_mu + torch.exp(self.bias_log_sigma) * self.bias_eps*var_in_out).detach()
+                bias = (
+                    self.bias_mu
+                    + torch.exp(self.bias_log_sigma) * self.bias_eps * var_in_out
+                ).detach()
             bias.requires_grad = requires_grad
 
         return weight, bias
-
 
 
 class BNN(BayesModule):
@@ -62,10 +89,18 @@ class BNN(BayesModule):
         self.in_features = action_dim + obs_dim
         self.out_features = obs_dim + reward_dim
 
-        self.input_layer = BayesLayerWithSample(prior_mu=0, prior_sigma=0.5, in_features=self.in_features, out_features=128)
-        self.hidden1_layer = BayesLayerWithSample(prior_mu=0, prior_sigma=0.5, in_features=128, out_features=128)
-        self.hidden2_layer = BayesLayerWithSample(prior_mu=0, prior_sigma=0.5, in_features=128, out_features=128)
-        self.output_layer = BayesLayerWithSample(prior_mu=0, prior_sigma=0.5,  in_features=128, out_features=self.out_features)
+        self.input_layer = BayesLayerWithSample(
+            prior_mu=0, prior_sigma=0.5, in_features=self.in_features, out_features=128
+        )
+        self.hidden1_layer = BayesLayerWithSample(
+            prior_mu=0, prior_sigma=0.5, in_features=128, out_features=128
+        )
+        self.hidden2_layer = BayesLayerWithSample(
+            prior_mu=0, prior_sigma=0.5, in_features=128, out_features=128
+        )
+        self.output_layer = BayesLayerWithSample(
+            prior_mu=0, prior_sigma=0.5, in_features=128, out_features=self.out_features
+        )
 
         if weight:
             self.copy_params_from_model(weight)
@@ -81,7 +116,7 @@ class BNN(BayesModule):
         try:
             self.load_state_dict(W)
         except BaseException:
-            print('non compatible W')
+            print("non compatible W")
 
     def sample_linear_net_functional(self, device):
         step = []
@@ -101,18 +136,17 @@ class BNN(BayesModule):
         for name, layer in self._modules.items():
             dict_forlayer = layer.sample_weight()
             for tensor_name, tensor in dict_forlayer.items():
-                params[name+'.'+tensor_name] = tensor
+                params[name + "." + tensor_name] = tensor
         return params
 
     def deterministic_mode(self):
-        '''deterministic output'''
+        """deterministic output"""
         freeze(self)
 
     def stochatisc_mode(self):
-        '''stochatisc output'''
+        """stochatisc output"""
         unfreeze(self)
 
 
-
-if __name__ == '__main__':
+if __name__ == "__main__":
     bnn = BNN(4, 39, 1)
